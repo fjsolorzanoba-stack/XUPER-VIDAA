@@ -26,31 +26,16 @@ const PORT = Number(process.env.PORT || process.argv[2] || 8899);
 const HOST = process.env.HOST || "0.0.0.0";
 
 // ---------------------------------------------------------------------------
-// 1. En Windows, redirigir rutas /tmp/xuper-* a os.tmpdir() sin tocar el servicio
-// ---------------------------------------------------------------------------
-if (process.platform === "win32") {
-  const mapTmp = (p) => {
-    if (typeof p === "string" && /^\/tmp\/(xuper-[^/\\]+)$/.test(p)) {
-      return path.join(os.tmpdir(), RegExp.$1);
-    }
-    return p;
-  };
-  const origReadFileSync = fs.readFileSync;
-  const origWriteFileSync = fs.writeFileSync;
-  const origAppendFileSync = fs.appendFileSync;
-  fs.readFileSync = function (p, ...rest) { return origReadFileSync.call(this, mapTmp(p), ...rest); };
-  fs.writeFileSync = function (p, ...rest) { return origWriteFileSync.call(this, mapTmp(p), ...rest); };
-  fs.appendFileSync = function (p, ...rest) { return origAppendFileSync.call(this, mapTmp(p), ...rest); };
-}
-
-// ---------------------------------------------------------------------------
-// 2. Detectar FFmpeg del sistema (Windows / Linux Cloud x64 / Docker)
-//    para que el "Modo Fluido" (fMP4 relay) funcione fuera de TVs armhf.
+// 1. Detectar FFmpeg (ffmpeg-static incluido en node_modules o FFmpeg del sistema)
 // ---------------------------------------------------------------------------
 function detectHostFfmpeg() {
   if (process.env.FFMPEG_PATH && fs.existsSync(process.env.FFMPEG_PATH)) {
     return process.env.FFMPEG_PATH;
   }
+  try {
+    const staticPath = require("ffmpeg-static");
+    if (staticPath && fs.existsSync(staticPath)) return staticPath;
+  } catch {}
   const probeCmd = process.platform === "win32" ? "where.exe" : "which";
   try {
     const r = spawnSync(probeCmd, ["ffmpeg"], { encoding: "utf8", timeout: 3000 });
@@ -73,10 +58,89 @@ function detectHostFfmpeg() {
 }
 
 const hostFfmpeg = detectHostFfmpeg();
+let lastClientHevcCapable = true;
+
+// Localizar hls.min.js local (instalado en node_modules/hls.js/dist/hls.min.js)
+function detectLocalHlsJs() {
+  const candidates = [
+    path.join(rootDir, "node_modules", "hls.js", "dist", "hls.min.js"),
+    path.join(rootDir, "node_modules", "hls.js", "dist", "hls.js"),
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return c;
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// 2. Adaptar rutas /tmp/xuper-* y ruta de FFmpeg en memoria sin tocar archivos
+// ---------------------------------------------------------------------------
+const mapPath = (p) => {
+  if (typeof p !== "string") return p;
+  if (process.platform === "win32" && /^\/tmp\/(xuper-[^/\\]+)$/.test(p)) {
+    return path.join(os.tmpdir(), RegExp.$1);
+  }
+  if (hostFfmpeg && !(process.platform === "linux" && process.arch === "arm")) {
+    if (/[\\/]ffmpeg$/i.test(p) || /xuper-ffmpeg$/i.test(p)) {
+      return hostFfmpeg;
+    }
+  }
+  return p;
+};
+
+const origReadFileSync = fs.readFileSync;
+const origWriteFileSync = fs.writeFileSync;
+const origAppendFileSync = fs.appendFileSync;
+const origAccessSync = fs.accessSync;
+const origStatSync = fs.statSync;
+
+fs.readFileSync = function (p, ...rest) { return origReadFileSync.call(this, mapPath(p), ...rest); };
+fs.writeFileSync = function (p, ...rest) { return origWriteFileSync.call(this, mapPath(p), ...rest); };
+fs.appendFileSync = function (p, ...rest) { return origAppendFileSync.call(this, mapPath(p), ...rest); };
+fs.accessSync = function (p, ...rest) { return origAccessSync.call(this, mapPath(p), ...rest); };
+fs.statSync = function (p, ...rest) { return origStatSync.call(this, mapPath(p), ...rest); };
+
 if (hostFfmpeg && !(process.platform === "linux" && process.arch === "arm")) {
   childProcess.spawn = function (cmd, args, opts) {
     if (typeof cmd === "string" && (/[\\/]ffmpeg$/i.test(cmd) || /xuper-ffmpeg$/i.test(cmd))) {
-      return origSpawn(hostFfmpeg, args, opts);
+      let finalArgs = Array.isArray(args) ? args.slice() : [];
+      // Si el dispositivo/navegador cliente no soporta HEVC (H.265) en hardware y el stream
+      // de Magis viene en HEVC (-tag:v hvc1), transcodificar video al vuelo a H.264 ultrafast
+      // para evitar "No se pudo abrir el stream (código 4)".
+      const tagIdx = finalArgs.indexOf("-tag:v");
+      const isHevcStream = tagIdx !== -1 && finalArgs[tagIdx + 1] === "hvc1";
+      if (isHevcStream && !lastClientHevcCapable) {
+        finalArgs.splice(tagIdx, 2);
+        const cIdx = finalArgs.indexOf("-c");
+        if (cIdx !== -1 && finalArgs[cIdx + 1] === "copy") {
+          finalArgs.splice(
+            cIdx,
+            2,
+            "-c:v", "libx264",
+            "-preset", "ultrafast",
+            "-tune", "zerolatency",
+            "-crf", "23",
+            "-pix_fmt", "yuv420p",
+            "-c:a", "aac",
+            "-ac", "2",
+            "-b:a", "160k"
+          );
+        } else {
+          const cvIdx = finalArgs.indexOf("-c:v");
+          if (cvIdx !== -1 && finalArgs[cvIdx + 1] === "copy") {
+            finalArgs.splice(
+              cvIdx,
+              2,
+              "-c:v", "libx264",
+              "-preset", "ultrafast",
+              "-tune", "zerolatency",
+              "-crf", "23",
+              "-pix_fmt", "yuv420p"
+            );
+          }
+        }
+      }
+      return origSpawn(hostFfmpeg, finalArgs, opts);
     }
     return origSpawn(cmd, args, opts);
   };
@@ -111,9 +175,31 @@ Module._load = function (request, parent, isMain) {
 };
 
 // Cargar el servicio real de XuperTV (magis, proxy, ffmpeg-relay, dnsx, netdiag...)
+// Interceptamos http.createServer durante la carga de módulos para capturar el handler
+// de ffmpeg-relay.js en memoria y evitar colisiones EADDRINUSE en los puertos 8787 y 8910.
+let relayRequestHandler = null;
+const origCreateServer = http.createServer;
+http.createServer = function (listener) {
+  const srv = origCreateServer.call(this, listener);
+  const origListen = srv.listen;
+  srv.listen = function (portArg, hostArg, cbArg) {
+    if (portArg === 8787) {
+      relayRequestHandler = listener;
+      return origListen.call(this, 0, "127.0.0.1", cbArg);
+    }
+    if (portArg === 8910) {
+      return origListen.call(this, 0, "127.0.0.1", cbArg);
+    }
+    return origListen.apply(this, arguments);
+  };
+  return srv;
+};
+
 require(path.join(svcDir, "index.js"));
 const proxy = require(path.join(svcDir, "proxy.js"));
 const relay = require(path.join(svcDir, "ffmpeg-relay.js"));
+http.createServer = origCreateServer;
+
 if (hostFfmpeg && relay && typeof relay.selfTest === "function") {
   relay.selfTest(() => {});
 }
@@ -142,6 +228,18 @@ function getPublicOrigin(req) {
 
 function rewritePayloadUrls(obj, origin) {
   if (!obj || typeof obj !== "object") return obj;
+  // Si un VOD en modo sin FFmpeg devolvió /media/<token>/stream.ts (video/mp2t),
+  // convertirlo al manifiesto HLS virtual (/media/<token>/stream.m3u8) porque los
+  // navegadores Chromium / VIDAA no reproducen archivos .ts crudos en <video>.
+  if (
+    typeof obj.proxyPath === "string" &&
+    /\/media\/[a-f0-9]+\/stream\.ts$/i.test(obj.proxyPath)
+  ) {
+    obj.proxyPath = obj.proxyPath.replace(/\/stream\.ts$/i, "/stream.m3u8");
+    obj.mime = "application/vnd.apple.mpegurl";
+    obj.isHls = true;
+  }
+
   // Importante: NO reescribimos :8787/s/ ni :8787/t/ dentro del JSON de resolveSmooth,
   // porque app.js comprueba /127\.0\.0\.1:8787\/s\// para habilitar seek (?start=) y
   // cambio de audio (&a=) en Modo Fluido. En su lugar, vidaa-shim.js redirige
@@ -168,6 +266,28 @@ function rewritePayloadUrls(obj, origin) {
 }
 
 function callServiceMethod(name, payload, cb) {
+  payload = payload && typeof payload === "object" ? { ...payload } : {};
+
+  // En Hisense VIDAA OS y navegadores Chromium, las películas y series VOD de Magis
+  // vienen en contenedores MPEG-TS (.ts) con H.265/H.264 que <video> no demuxa en crudo.
+  // Si FFmpeg está disponible, enrutar siempre VOD (resolve / resolveSmooth) por el
+  // relay fMP4 (video/mp4) para garantizar reproducción instantánea sin código 4.
+  if (name === "resolve" || name === "resolveSmooth") {
+    if (payload.hevc !== undefined) {
+      lastClientHevcCapable = !(
+        payload.hevc === false ||
+        payload.hevc === "false" ||
+        payload.hevc === 0 ||
+        payload.hevc === "0"
+      );
+    }
+    if (relay && relay.available()) {
+      payload.forceRelay = true;
+      payload.playbackMode = "smooth";
+      payload.container = "mp4";
+    }
+  }
+
   const fn = registeredMethods[name];
   if (!fn) {
     return cb(404, { returnValue: false, errorText: `Unknown method "${name}"` });
@@ -181,7 +301,7 @@ function callServiceMethod(name, payload, cb) {
   }, 30000);
 
   const msg = {
-    payload: payload || {},
+    payload,
     isSubscription: false,
     subscribe() {},
     respond(data) {
@@ -207,7 +327,9 @@ function callServiceMethod(name, payload, cb) {
 
 // ---------------------------------------------------------------------------
 // 5. Proxy inverso interno hacia proxy.js (media/sub/hls) y ffmpeg-relay (s/t)
-//    Permite exponer TODO en un único puerto HTTP/HTTPS para Cloud y VIDAA OS
+//    Nota: En Node 20/24 NO se debe usar req.on("close") porque para peticiones
+//    GET sin body se dispara inmediatamente al terminar de leer la cabecera,
+//    abortando la conexión upstream (causa del HTTP 502 / código 4).
 // ---------------------------------------------------------------------------
 function forwardToInternalPort(req, res, targetPort, rewriteM3u8Origin) {
   if (!targetPort) {
@@ -215,14 +337,20 @@ function forwardToInternalPort(req, res, targetPort, rewriteM3u8Origin) {
     res.end("Media service starting");
     return;
   }
-  const headers = { ...req.headers, host: `127.0.0.1:${targetPort}` };
+  const fwdHeaders = {};
+  if (req.headers.range) fwdHeaders.Range = req.headers.range;
+  if (req.headers["if-range"]) fwdHeaders["If-Range"] = req.headers["if-range"];
+  if (req.headers["user-agent"]) fwdHeaders["User-Agent"] = req.headers["user-agent"];
+  if (req.headers.accept) fwdHeaders.Accept = req.headers.accept;
+  fwdHeaders.Host = `127.0.0.1:${targetPort}`;
+
   const upReq = http.request(
     {
       hostname: "127.0.0.1",
       port: targetPort,
       path: req.url,
-      method: req.method,
-      headers,
+      method: req.method || "GET",
+      headers: fwdHeaders,
     },
     (upRes) => {
       const ct = String(upRes.headers["content-type"] || "").toLowerCase();
@@ -261,15 +389,22 @@ function forwardToInternalPort(req, res, targetPort, rewriteM3u8Origin) {
       res.writeHead(502, { "Content-Type": "text/plain", "Access-Control-Allow-Origin": "*" });
       res.end("Proxy error: " + err.message);
     } else {
-      res.destroy();
+      try { res.destroy(); } catch {}
     }
   });
 
-  req.on("close", () => {
-    try { upReq.destroy(); } catch {}
+  // Solo abortar upstream si el cliente cierra la respuesta antes de terminar
+  res.on("close", () => {
+    if (!res.writableEnded) {
+      try { upReq.destroy(); } catch {}
+    }
   });
 
-  req.pipe(upReq);
+  if (req.method === "GET" || req.method === "HEAD" || req.method === "OPTIONS") {
+    upReq.end();
+  } else {
+    req.pipe(upReq);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -287,6 +422,30 @@ function buildVidaaShimJs() {
     var mLocal = /^https?:\\/\\/(127\\.0\\.0\\.1|localhost):\\d+(\\/.*)$/i.exec(url);
     if (mLocal) return ORIGIN + mLocal[2];
     return url;
+  }
+
+  function isHlsUrl(url) {
+    if (typeof url !== "string" || !url) return false;
+    return /\\.m3u8($|[?#])/i.test(url) || /\\/hls\\//i.test(url);
+  }
+
+  function isBlobUrl(url) {
+    return typeof url === "string" && url.indexOf("blob:") === 0;
+  }
+
+  function destroyVideoHls(video) {
+    if (video && video._xuperHls) {
+      var h = video._xuperHls;
+      video._xuperHls = null;
+      video._xuperInHlsOp = true;
+      try { h.destroy(); } catch (e) {}
+      video._xuperInHlsOp = false;
+    }
+    if (video) {
+      video._xuperM3u8Src = "";
+      video._xuperHlsUrl = "";
+      video._xuperWantPlay = false;
+    }
   }
 
   // 1. Emular entorno PalmSystem y PalmServiceBridge para que webOSTV.js y app.js
@@ -319,7 +478,6 @@ function buildVidaaShimJs() {
     Bridge.prototype.call = function (uri, payloadStr) {
       var self = this;
       var u = String(uri || "");
-      // Responder llamadas del sistema de LG inmediatamente en memoria
       if (u.indexOf("com.webosflux.xuptertv.fidelity.service") === -1) {
         setTimeout(function () {
           if (typeof self.onservicecallback === "function") {
@@ -382,121 +540,277 @@ function buildVidaaShimJs() {
     return origOpen.apply(this, args);
   };
 
-  // 3. Limpiar ';mediaOption=...' (exclusivo de LG) y redirigir 127.0.0.1 en <video>/<source>
+  // 3. Interceptar atributos y propiedades de <video> y <source>
+  //    En Chromium / VIDAA, si un <source src="...m3u8"> o video.src = "...m3u8" se pasa
+  //    al reproductor nativo sin demuxer HLS nativo, el navegador lanza inmediatamente
+  //    MEDIA_ERR_SRC_NOT_SUPPORTED (código 4). Usamos Hls.js (MSE) cuando está soportado.
+  var useHlsJs = function () {
+    return !!(window.Hls && typeof window.Hls.isSupported === "function" && window.Hls.isSupported());
+  };
+
   var origSetAttribute = Element.prototype.setAttribute;
   Element.prototype.setAttribute = function (name, value) {
     var attr = String(name || "").toLowerCase();
     if (attr === "src") {
+      if (isBlobUrl(value) || this._xuperInHlsOp) {
+        return origSetAttribute.call(this, name, value);
+      }
       value = rewriteLoopbackUrl(value);
+      if (this.tagName === "VIDEO" && isHlsUrl(value) && useHlsJs()) {
+        this._xuperM3u8Src = value;
+        return;
+      }
     } else if (attr === "type" && typeof value === "string" && value.indexOf(";mediaOption=") !== -1) {
       value = value.split(";mediaOption=")[0];
     }
     return origSetAttribute.call(this, name, value);
   };
 
+  var origRemoveAttribute = Element.prototype.removeAttribute;
+  Element.prototype.removeAttribute = function (name) {
+    if (this.tagName === "VIDEO" && String(name || "").toLowerCase() === "src") {
+      if (!this._xuperInHlsOp) {
+        destroyVideoHls(this);
+      }
+    }
+    return origRemoveAttribute.apply(this, arguments);
+  };
+
   var mediaProto = typeof HTMLMediaElement !== "undefined" ? HTMLMediaElement.prototype : null;
   var mediaSrcDesc = mediaProto ? Object.getOwnPropertyDescriptor(mediaProto, "src") : null;
+
+  var origAppendChild = Node.prototype.appendChild;
+  Node.prototype.appendChild = function (child) {
+    if (
+      this &&
+      this.tagName === "VIDEO" &&
+      child &&
+      child.tagName === "SOURCE"
+    ) {
+      var rawSrc = child.getAttribute("src") || "";
+      if (isBlobUrl(rawSrc) || this._xuperInHlsOp) {
+        return origAppendChild.apply(this, arguments);
+      }
+      var sUrl = rewriteLoopbackUrl(rawSrc);
+      if (isHlsUrl(sUrl) && useHlsJs()) {
+        this._xuperM3u8Src = sUrl;
+        return child;
+      }
+      if (sUrl && mediaSrcDesc && mediaSrcDesc.set) {
+        destroyVideoHls(this);
+        if (mediaSrcDesc.get.call(this) !== sUrl) {
+          this._xuperSrcSetAt = Date.now();
+          mediaSrcDesc.set.call(this, sUrl);
+        }
+        return child;
+      }
+    }
+    return origAppendChild.apply(this, arguments);
+  };
+
   if (mediaSrcDesc && mediaSrcDesc.set) {
     Object.defineProperty(mediaProto, "src", {
       configurable: true,
       enumerable: true,
       get: function () {
-        return mediaSrcDesc.get.call(this);
+        var nativeVal = mediaSrcDesc.get.call(this);
+        return nativeVal || this._xuperM3u8Src || "";
       },
       set: function (val) {
-        return mediaSrcDesc.set.call(this, rewriteLoopbackUrl(val));
+        // Hls.js asigna internamente video.src = "blob:http://..." durante attachMedia().
+        // NO debemos destruir la instancia de Hls.js cuando el valor es un blob: URL.
+        if (isBlobUrl(val) || this._xuperInHlsOp) {
+          this._xuperSrcSetAt = Date.now();
+          return mediaSrcDesc.set.call(this, val);
+        }
+        if (!val) {
+          destroyVideoHls(this);
+          this._xuperSrcSetAt = 0;
+          origRemoveAttribute.call(this, "src");
+          return "";
+        }
+        var rewritten = rewriteLoopbackUrl(val);
+        if (this.tagName === "VIDEO" && isHlsUrl(rewritten) && useHlsJs()) {
+          if (this._xuperHls) {
+            var oldHls = this._xuperHls;
+            this._xuperHls = null;
+            this._xuperInHlsOp = true;
+            try { oldHls.destroy(); } catch (e) {}
+            this._xuperInHlsOp = false;
+          }
+          this._xuperM3u8Src = rewritten;
+          this._xuperHlsUrl = "";
+          return rewritten;
+        }
+        destroyVideoHls(this);
+        if (mediaSrcDesc.get.call(this) === rewritten) {
+          return rewritten;
+        }
+        this._xuperSrcSetAt = Date.now();
+        return mediaSrcDesc.set.call(this, rewritten);
       }
     });
   }
 
-  // 4. Soporte automático de HLS (.m3u8) para VIDAA OS y navegadores Chromium (MSE / hls.js)
-  if (!window.Hls) {
-    try {
-      var hlsScript = document.createElement("script");
-      hlsScript.async = true;
-      hlsScript.src = "https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js";
-      (document.head || document.documentElement).appendChild(hlsScript);
-    } catch (e) {}
-  }
+  var origLoad = mediaProto && mediaProto.load ? mediaProto.load : null;
+  var origPlay = mediaProto && mediaProto.play ? mediaProto.play : null;
 
-  function canPlayNativeHls(video) {
-    try {
-      var res = video.canPlayType("application/vnd.apple.mpegurl") || video.canPlayType("application/x-mpegURL");
-      return res === "probably" || res === "maybe";
-    } catch (e) {
-      return false;
-    }
-  }
-
-  function attachHlsIfNeeded(video) {
-    if (!video || video.tagName !== "VIDEO") return false;
-    var src = video.getAttribute("src") || "";
-    if (!src) {
-      var sourceEl = video.querySelector("source");
-      if (sourceEl) src = sourceEl.getAttribute("src") || "";
-    }
-    src = rewriteLoopbackUrl(src);
-    if (!src) return false;
-
+  function fallbackLiveToFfmpeg(video, m3u8Url) {
+    if (!m3u8Url || video._xuperLiveFallbackUrl === m3u8Url) return;
+    video._xuperLiveFallbackUrl = m3u8Url;
     if (video._xuperHls) {
-      try { video._xuperHls.destroy(); } catch (e) {}
+      var old = video._xuperHls;
       video._xuperHls = null;
+      video._xuperInHlsOp = true;
+      try { old.destroy(); } catch (e) {}
+      video._xuperInHlsOp = false;
     }
-
-    var isM3u8 = /\\.m3u8($|[?#])/i.test(src) || /\\/hls\\//i.test(src);
-    if (!isM3u8) return false;
-
-    // En Hisense VIDAA con soporte HLS nativo, asegurar que video.src esté asignado directamente
-    if (canPlayNativeHls(video)) {
+    video._xuperM3u8Src = "";
+    video._xuperHlsUrl = "";
+    var liveMp4Url = ORIGIN + "/live-s?src=" + encodeURIComponent(m3u8Url) + "&_t=" + Date.now();
+    video._xuperInHlsOp = true;
+    try {
+      origRemoveAttribute.call(video, "src");
+      while (video.firstChild) video.removeChild(video.firstChild);
       if (mediaSrcDesc && mediaSrcDesc.set) {
-        mediaSrcDesc.set.call(video, src);
+        mediaSrcDesc.set.call(video, liveMp4Url);
       } else {
-        origSetAttribute.call(video, "src", src);
+        origSetAttribute.call(video, "src", liveMp4Url);
       }
-      return false;
-    }
+      if (origLoad) origLoad.call(video);
+      if (origPlay) {
+        var p = origPlay.call(video);
+        if (p && p.catch) p.catch(function () {});
+      }
+    } catch (e) {}
+    video._xuperInHlsOp = false;
+  }
 
-    // En navegadores Chromium / VIDAA sin demuxer HLS nativo en <video>, usar Hls.js (MSE)
-    if (window.Hls && window.Hls.isSupported()) {
-      var hls = new window.Hls({
-        enableWorker: true,
-        lowLatencyMode: false,
-        backBufferLength: 30,
-        maxBufferLength: 30
-      });
-      video._xuperHls = hls;
-      hls.loadSource(src);
-      hls.attachMedia(video);
-      hls.on(window.Hls.Events.MANIFEST_PARSED, function () {
+  function startHlsPlayback(video, src) {
+    if (video._xuperHls) {
+      var prev = video._xuperHls;
+      video._xuperHls = null;
+      video._xuperInHlsOp = true;
+      try { prev.destroy(); } catch (e) {}
+      video._xuperInHlsOp = false;
+    }
+    var hls = new window.Hls({
+      enableWorker: true,
+      lowLatencyMode: false,
+      backBufferLength: 30,
+      maxBufferLength: 30,
+      manifestLoadingTimeOut: 20000,
+      levelLoadingTimeOut: 20000,
+      fragLoadingTimeOut: 25000
+    });
+    video._xuperHls = hls;
+    video._xuperHlsUrl = src;
+    video._xuperM3u8Src = src;
+
+    var mediaRecoveries = 0;
+    var netRecoveries = 0;
+
+    function tryAutoPlay() {
+      if (video._xuperWantPlay && origPlay) {
         try {
-          var p = video.play();
+          var p = origPlay.call(video);
           if (p && p.catch) p.catch(function () {});
         } catch (e) {}
-      });
-      hls.on(window.Hls.Events.ERROR, function (_ev, data) {
-        if (data && data.fatal) {
-          if (data.type === window.Hls.ErrorTypes.NETWORK_ERROR) {
+      }
+    }
+
+    hls.on(window.Hls.Events.MEDIA_ATTACHED, function () {
+      hls.loadSource(src);
+    });
+    hls.on(window.Hls.Events.MANIFEST_PARSED, tryAutoPlay);
+    if (window.Hls.Events.FRAG_BUFFERED) {
+      hls.on(window.Hls.Events.FRAG_BUFFERED, tryAutoPlay);
+    }
+    hls.on(window.Hls.Events.ERROR, function (_ev, data) {
+      if (data && data.fatal) {
+        if (data.type === window.Hls.ErrorTypes.NETWORK_ERROR) {
+          netRecoveries++;
+          if (netRecoveries <= 2) {
             hls.startLoad();
-          } else if (data.type === window.Hls.ErrorTypes.MEDIA_ERROR) {
-            hls.recoverMediaError();
+            return;
+          }
+        } else if (
+          data.type === window.Hls.ErrorTypes.MEDIA_ERROR &&
+          data.details !== "bufferAddCodecError" &&
+          data.details !== "manifestIncompatibleCodecsError"
+        ) {
+          mediaRecoveries++;
+          if (mediaRecoveries <= 1) {
+            video._xuperInHlsOp = true;
+            try { hls.recoverMediaError(); } catch (e) {}
+            video._xuperInHlsOp = false;
+            return;
           }
         }
-      });
-      return true;
+        fallbackLiveToFfmpeg(video, src);
+      }
+    });
+    video._xuperInHlsOp = true;
+    try {
+      hls.attachMedia(video);
+    } finally {
+      video._xuperInHlsOp = false;
     }
-    return false;
   }
 
-  if (mediaProto && mediaProto.load) {
-    var origLoad = mediaProto.load;
+  if (mediaProto && origLoad) {
     mediaProto.load = function () {
-      if (attachHlsIfNeeded(this)) return;
+      if (this.tagName === "VIDEO") {
+        if (this._xuperInHlsOp) {
+          return origLoad.apply(this, arguments);
+        }
+        var m3u8 = this._xuperM3u8Src || "";
+        if (!m3u8) {
+          var sEl = this.querySelector("source");
+          if (sEl) {
+            var cand = rewriteLoopbackUrl(sEl.getAttribute("src") || "");
+            if (isHlsUrl(cand)) m3u8 = cand;
+          }
+        }
+        if (m3u8 && useHlsJs()) {
+          if (this._xuperHls && this._xuperHlsUrl === m3u8) {
+            return;
+          }
+          startHlsPlayback(this, m3u8);
+          return;
+        }
+        // Ignorar llamadas a video.load() en vacío o duplicadas tras asignar video.src
+        var currentNativeSrc = mediaSrcDesc && mediaSrcDesc.get ? mediaSrcDesc.get.call(this) : this.getAttribute("src");
+        if (!currentNativeSrc && !this.querySelector("source")) {
+          return;
+        }
+        if (this._xuperSrcSetAt && (Date.now() - this._xuperSrcSetAt < 300)) {
+          this._xuperSrcSetAt = 0;
+          return;
+        }
+      }
       return origLoad.apply(this, arguments);
     };
   }
 
-  // 5. Normalizar códigos de control remoto de Hisense VIDAA OS
-  //    (Botón Back/Return en distintas generaciones de VIDAA: 8, 27, 461, 10009, 166, BrowserBack)
+  if (mediaProto && origPlay) {
+    mediaProto.play = function () {
+      if (this.tagName === "VIDEO" && this._xuperM3u8Src && useHlsJs()) {
+        this._xuperWantPlay = true;
+        if (!this._xuperHls) {
+          startHlsPlayback(this, this._xuperM3u8Src);
+        }
+        try {
+          var p = origPlay.apply(this, arguments);
+          if (p && p.catch) p.catch(function () {});
+        } catch (e) {}
+        return typeof Promise !== "undefined" ? Promise.resolve() : undefined;
+      }
+      return origPlay.apply(this, arguments);
+    };
+  }
+
+  // 4. Normalizar códigos de control remoto de Hisense VIDAA OS
   window.addEventListener("keydown", function (e) {
     var code = e.keyCode || e.which;
     var k = e.key || "";
@@ -594,7 +908,7 @@ function buildInstallPageHtml(req) {
     <div class="status">
       <div class="pill">Estado del servidor: <strong>En línea ✅</strong></div>
       <div class="pill">Proxy Anti-Bloqueo DoH: <strong>Activo ✅</strong></div>
-      <div class="pill">FFmpeg Modo Fluido: <strong>${hostFfmpeg ? "Disponible ✅" : "Modo Normal (HLS) ✅"}</strong></div>
+      <div class="pill">FFmpeg Modo Fluido: <strong>${hostFfmpeg ? "Activo ✅" : "Modo Normal (HLS) ✅"}</strong></div>
     </div>
   </div>
 
@@ -720,13 +1034,84 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // B. Rutas del relay FFmpeg Modo Fluido (/s/*, /t/*, /abort)
+  // B. Rutas del relay FFmpeg Modo Fluido (/s/*, /t/*, /abort) y fallback Live fMP4 (/live-s)
   if (pathname.startsWith("/s/") || pathname.startsWith("/t/") || pathname === "/abort") {
+    if (typeof relayRequestHandler === "function") {
+      relayRequestHandler(req, res);
+      return;
+    }
     forwardToInternalPort(req, res, relay.port(), null);
     return;
   }
 
-  // C. Script de compatibilidad VIDAA OS + HLS.js
+  if (pathname === "/live-s" && hostFfmpeg) {
+    const rawSrc = u.searchParams.get("src") || "";
+    const pPort = proxy.port();
+    const internalSrc = rawSrc.replace(
+      /^https?:\/\/[^/]+(?=\/(media|hls|sub)\/)/i,
+      `http://127.0.0.1:${pPort}`
+    );
+    if (!internalSrc) {
+      res.writeHead(400, { "Content-Type": "text/plain", "Access-Control-Allow-Origin": "*" });
+      res.end("Missing src");
+      return;
+    }
+    res.writeHead(200, {
+      "Content-Type": "video/mp4",
+      "Cache-Control": "no-store",
+      "Access-Control-Allow-Origin": "*",
+      Connection: "keep-alive",
+    });
+    const ff = origSpawn(
+      hostFfmpeg,
+      [
+        "-hide_banner",
+        "-loglevel", "error",
+        "-fflags", "+genpts+discardcorrupt+nobuffer",
+        "-i", internalSrc,
+        "-map", "0:v:0",
+        "-map", "0:a:0?",
+        "-c:v", "libx264",
+        "-preset", "ultrafast",
+        "-tune", "zerolatency",
+        "-pix_fmt", "yuv420p",
+        "-g", "60",
+        "-c:a", "aac",
+        "-ac", "2",
+        "-ar", "48000",
+        "-b:a", "128k",
+        "-f", "mp4",
+        "-movflags", "frag_keyframe+empty_moov+default_base_moof",
+        "pipe:1",
+      ],
+      { stdio: ["ignore", "pipe", "ignore"] }
+    );
+    ff.stdout.pipe(res);
+    const killFf = () => {
+      try { ff.kill("SIGKILL"); } catch {}
+    };
+    res.on("close", killFf);
+    res.on("error", killFf);
+    return;
+  }
+
+  // C. Librería local hls.min.js y script de compatibilidad vidaa-shim.js
+  if (pathname === "/hls.min.js") {
+    const localHls = detectLocalHlsJs();
+    if (localHls) {
+      res.writeHead(200, {
+        "Content-Type": "application/javascript; charset=utf-8",
+        "Cache-Control": "public, max-age=86400",
+        "Access-Control-Allow-Origin": "*",
+      });
+      fs.createReadStream(localHls).pipe(res);
+      return;
+    }
+    res.writeHead(302, { Location: "https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js" });
+    res.end();
+    return;
+  }
+
   if (pathname === "/vidaa-shim.js") {
     const body = buildVidaaShimJs();
     res.writeHead(200, {
@@ -819,7 +1204,7 @@ const server = http.createServer((req, res) => {
     const ext = path.extname(filePath).toLowerCase();
     const contentType = MIME_TYPES[ext] || "application/octet-stream";
 
-    // Inyectar en memoria el shim de Hisense VIDAA y hls.js al servir index.html
+    // Inyectar en memoria hls.min.js y vidaa-shim.js antes de webOSTV.js y app.js
     if (relPath === "index.html") {
       fs.readFile(filePath, "utf8", (rerr, html) => {
         if (rerr) {
@@ -829,7 +1214,7 @@ const server = http.createServer((req, res) => {
         }
         const injected = html.replace(
           '<script src="js/webOSTV.js"></script>',
-          '<script src="vidaa-shim.js"></script>\n<script src="js/webOSTV.js"></script>'
+          '<script src="hls.min.js"></script>\n<script src="vidaa-shim.js"></script>\n<script src="js/webOSTV.js"></script>'
         );
         res.writeHead(200, {
           "Content-Type": contentType,

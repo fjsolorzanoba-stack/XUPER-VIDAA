@@ -13,6 +13,19 @@ if errorlevel 1 (
     exit /b 1
 )
 
+if not exist "%~dp0node_modules\hls.js" (
+    echo Instalando dependencias de reproduccion ^(HLS y FFmpeg^)...
+    call npm.cmd install
+    if exist "%~dp0node_modules\ffmpeg-static\install.js" (
+        node "%~dp0node_modules\ffmpeg-static\install.js"
+    )
+)
+
+REM Cerrar instancia previa en los puertos 8899, 8787 o 8910 si existiera
+for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8899 :8787 :8910" ^| findstr "LISTENING"') do (
+    taskkill /F /PID %%a >nul 2>&1
+)
+
 REM Intentar habilitar el puerto 8899 en el Firewall de Windows (si tiene permisos)
 netsh advfirewall firewall show rule name="XuperTV Hisense VIDAA" >nul 2>&1
 if errorlevel 1 (

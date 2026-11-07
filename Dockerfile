@@ -8,12 +8,15 @@ RUN apt-get update && \
 WORKDIR /app
 
 COPY package.json ./
+RUN npm install --omit=dev --ignore-scripts
+
 COPY tools ./tools
 COPY webos ./webos
 COPY version.json ./
 
 ENV NODE_ENV=production
 ENV PORT=8899
+ENV FFMPEG_PATH=/usr/bin/ffmpeg
 
 EXPOSE 8899
 

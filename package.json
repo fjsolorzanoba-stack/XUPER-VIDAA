@@ -4,7 +4,12 @@
   "description": "Servidor unificado de XuperTV Hydra para Hisense VIDAA OS y Smart TVs",
   "main": "tools/vidaa_server.mjs",
   "scripts": {
-    "start": "node tools/vidaa_server.mjs"
+    "start": "node tools/vidaa_server.mjs",
+    "postinstall": "node -e \"try{if(!process.env.FFMPEG_PATH)require('./node_modules/ffmpeg-static/install.js')}catch(e){}\""
+  },
+  "dependencies": {
+    "ffmpeg-static": "^5.2.0",
+    "hls.js": "^1.5.17"
   },
   "engines": {
     "node": ">=18.0.0"
