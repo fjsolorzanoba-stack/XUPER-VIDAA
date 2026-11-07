@@ -1,0 +1,9 @@
+{
+  "version": "2.2.77",
+  "name": "XuperTV",
+  "minWebos": "1.0.0",
+  "ipkUrl": "https://github.com/cristianco7/XUPER-HYDRA-PORT-WEBOS/releases/download/v2.2.77/com.webosflux.xuptertv.fidelity_2.2.77_all.ipk",
+  "sha256": "B176C8EBA4B401C5123BE49BFD174692D0889615B4F9A69B2AC65B4432349848",
+  "changelog": "Corrige el validador de versión en actualización OTA para permitir la instalación directa desde la app.",
+  "releaseDate": "2026-11-06"
+}

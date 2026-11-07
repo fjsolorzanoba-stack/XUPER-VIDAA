@@ -1,0 +1,1 @@
+window.XUPERTV_API={enabled:!0,mode:"portal",serviceId:"com.webosflux.xuptertv.fidelity.service",refresh:!0,devServiceUrl:"http://127.0.0.1:8910",useBundledCatalog:!0,baseUrl:"",catalogPath:"",detailPath:"",searchPath:"",headers:{},imageBaseUrl:"",timeoutMs:2e4,session:{userId:"",userToken:"",portalCode:"",homePageCode:"",version:"4.34.4"}};

@@ -1,0 +1,31 @@
+{
+  "id": "com.webosflux.xuptertv.fidelity.service",
+  "description": "XuperTV portal catalog and playback resolver",
+  "services": [
+    {
+      "name": "com.webosflux.xuptertv.fidelity.service",
+      "description": "Magis portal client (anonymous session), catalog, search, detail and VOD resolve",
+      "commands": [
+        { "name": "ping", "public": false },
+        { "name": "setProxy", "public": false },
+        { "name": "keepAlive", "public": false },
+        { "name": "heartbeat", "public": false },
+        { "name": "home", "public": false },
+        { "name": "search", "public": false },
+        { "name": "detail", "public": false },
+        { "name": "resolve", "public": false },
+        { "name": "resolveSmooth", "public": false },
+        { "name": "mediaInfo", "public": false },
+        { "name": "liveChannels", "public": false },
+        { "name": "liveCategories", "public": false },
+        { "name": "fetchM3u", "public": false },
+        { "name": "resolveLive", "public": false },
+        { "name": "abortMedia", "public": false },
+        { "name": "prewarm", "public": false },
+        { "name": "netdiag", "public": false },
+        { "name": "checkUpdate", "public": false },
+        { "name": "applyUpdate", "public": false }
+      ]
+    }
+  ]
+}

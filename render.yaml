@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: xupertv-hisense-vidaa
+    runtime: docker
+    plan: free
+    autoDeploy: true
+    healthCheckPath: /api/ping
+    envVars:
+      - key: PORT
+        value: 8899

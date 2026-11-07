@@ -1,0 +1,626 @@
+/* =============================================================================
+   XuperTV UI refresh (webOS / Chromium 53)
+   Loaded after style.css.  Adds a consistent focus language, a calmer settings
+   shell and the subtitle-style controls, without touching playback layout.
+   ============================================================================= */
+
+/* --- Focus: one visible language for every control ------------------------ */
+.settings-item,
+.pb-opt,
+.dps-btn,
+.psv-btn,
+.da-btn,
+.da-exit-btn,
+.dps-exit-btn,
+.dps-switch,
+.sp-switch,
+.subs-pill {
+  -webkit-transition: background-color .12s ease, color .12s ease, box-shadow .12s ease;
+  transition: background-color .12s ease, color .12s ease, box-shadow .12s ease;
+}
+
+.settings-item.is-focused,
+.pb-opt.is-focused,
+.dps-btn.is-focused,
+.psv-btn.is-focused,
+.da-btn.is-focused,
+.da-exit-btn.is-focused,
+.dps-exit-btn.is-focused,
+.dps-switch.is-focused,
+.sp-switch.is-focused,
+.subs-pill.is-focused {
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, .92),
+              0 0 0 7px rgba(210, 21, 37, .45);
+}
+
+
+
+/* --- Subtitle settings panel --------------------------------------------- */
+.settings-panel.subs-panel {
+  padding: 66px 84px 60px 64px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.subs-head {
+  font-size: 44px;
+  line-height: 52px;
+  font-weight: bold;
+  color: #ffffff;
+}
+.subs-sub {
+  margin-top: 10px;
+  max-width: 980px;
+  font-size: 22px;
+  line-height: 32px;
+  color: #8b95a3;
+}
+.subs-preview {
+  position: relative;
+  margin-top: 28px;
+  height: 236px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, .10);
+  background: -webkit-linear-gradient(135deg, #101a29 0%, #1c2738 55%, #0a0f17 100%);
+  background: linear-gradient(135deg, #101a29 0%, #1c2738 55%, #0a0f17 100%);
+  overflow: hidden;
+}
+.subs-preview::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 120px;
+  background: -webkit-linear-gradient(top, rgba(0,0,0,0), rgba(0,0,0,.55));
+  background: linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,.55));
+}
+.subs-preview-badge {
+  position: absolute;
+  left: 26px; top: 20px;
+  font-size: 17px;
+  letter-spacing: 1.6px;
+  color: #8b95a3;
+  text-transform: uppercase;
+}
+.subs-preview-text {
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  bottom: 34px;
+  z-index: 2;
+  text-align: center;
+  font-family: "Trebuchet MS Bold", "Trebuchet MS", Trebuchet, Arial, sans-serif;
+  font-weight: 900;
+  font-style: italic;
+  line-height: 1.35;
+  color: #ffffff;
+  -webkit-text-stroke: 2px #000000;
+  text-shadow: 1px 2px 1px rgba(0, 0, 0, .95);
+  transition: font-size .15s ease, color .15s ease, background-color .15s ease;
+}
+.subs-rows {
+  margin-top: 22px;
+}
+.subs-row {
+  margin-bottom: 18px;
+}
+.subs-row-label {
+  margin-bottom: 9px;
+  font-size: 21px;
+  line-height: 26px;
+  letter-spacing: .6px;
+  color: #8b95a3;
+}
+.subs-pills {
+  display: -webkit-box;
+  display: flex;
+  -webkit-box-orient: horizontal;
+  flex-direction: row;
+  -webkit-box-lines: multiple;
+  flex-wrap: wrap;
+}
+.subs-pill {
+  display: -webkit-box;
+  display: flex;
+  -webkit-box-align: center;
+  align-items: center;
+  -webkit-box-pack: center;
+  justify-content: center;
+  min-width: 132px;
+  height: 52px;
+  padding: 0 22px;
+  margin: 0 14px 10px 0;
+  box-sizing: border-box;
+  border-radius: 10px;
+  background: #181818;
+  color: #c7cdd4;
+  font-size: 23px;
+  line-height: 1;
+}
+.subs-pill.is-checked {
+  background: #2b2b2b;
+  color: #ffffff;
+}
+.subs-pill.is-focused {
+  background: #d21525;
+  color: #ffffff;
+}
+.subs-swatch {
+  width: 20px;
+  height: 20px;
+  margin-right: 10px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, .40);
+  box-sizing: border-box;
+}
+.subs-hint {
+  margin-top: 8px;
+  font-size: 19px;
+  line-height: 26px;
+  color: #6f7884;
+}
+
+/* --- Subtitle overlay honours the saved style ---------------------------- */
+.player-subtitles.size-small .player-subtitles-text { font-size: 34px; }
+.player-subtitles.size-normal .player-subtitles-text { font-size: 48px; }
+.player-subtitles.size-big .player-subtitles-text { font-size: 60px; }
+.player-subtitles.size-huge .player-subtitles-text { font-size: 74px; }
+
+.player-subtitles.color-white .player-subtitles-text { color: #ffffff; }
+.player-subtitles.color-yellow .player-subtitles-text { color: #f6e33f; }
+.player-subtitles.color-cyan .player-subtitles-text { color: #8fe9ff; }
+.player-subtitles.color-lime .player-subtitles-text { color: #b6f36b; }
+
+.player-subtitles.outline-off .player-subtitles-text {
+  -webkit-text-stroke: 0;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, .90);
+}
+
+.player-subtitles.bg-none .player-subtitles-text {
+  background: transparent;
+}
+.player-subtitles.bg-shadow .player-subtitles-text {
+  background: rgba(0, 0, 0, .42);
+  border-radius: 8px;
+  padding: 6px 18px;
+}
+.player-subtitles.bg-box .player-subtitles-text {
+  background: #000000;
+  border-radius: 6px;
+  padding: 6px 20px;
+}
+
+.player-subtitles.pos-middle {
+  bottom: 42%;
+}
+.player-subtitles.pos-middle.shift-up {
+  bottom: 400px;
+}
+
+/* Dialog swatches for the new colours */
+.dps-color-preview.cyan { color: #8fe9ff; }
+.dps-color-preview.lime { color: #b6f36b; }
+
+/* =============================================================================
+   DETAIL + PLAYER PANEL
+   ============================================================================= */
+#screen-detail {
+  background: -webkit-radial-gradient(70% 18%, 1200px 700px, #161c25 0%, #050505 72%);
+  background: radial-gradient(1200px 700px at 70% 18%, #161c25 0%, #050505 72%);
+}
+.detail-left {
+  left: 72px;
+  top: 44px;
+}
+.detail-title {
+  font-size: 54px;
+  line-height: 62px;
+}
+.detail-score {
+  color: #ffd166;
+}
+.detail-player {
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .10);
+  box-shadow: 0 22px 60px rgba(0, 0, 0, .65);
+}
+.detail-player.is-focused::after {
+  box-shadow: inset 0 0 0 3px #ffffff;
+  border-radius: 18px;
+}
+.detail-btn {
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .10);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12);
+}
+.detail-btn.is-focused {
+  background: #d21525;
+  box-shadow: 0 0 0 3px #ffffff;
+  -webkit-transform: scale(1.04);
+  transform: scale(1.04);
+}
+.detail-btn.is-selected {
+  background: rgba(210, 21, 37, .92);
+}
+.detail-more {
+  color: #8fe9ff;
+}
+.detail-season,
+.detail-range,
+.detail-episode {
+  border-radius: 10px;
+}
+.detail-season.is-focused,
+.detail-episode.is-focused {
+  background: #d21525;
+  color: #ffffff;
+}
+.detail-related {
+  padding-left: 18px;
+}
+.detail-related::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 7px;
+  width: 5px; height: 30px;
+  border-radius: 3px;
+  background: #d21525;
+}
+
+/* Player bottom panel (PlaySettingView) */
+.player-playsetting-view {
+  padding: 0 72px 54px 72px;
+  background: -webkit-linear-gradient(top, rgba(0,0,0,0) 0%, rgba(0,0,0,.72) 38%, rgba(0,0,0,.96) 100%);
+  background: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,.72) 38%, rgba(0,0,0,.96) 100%);
+}
+.psv-row {
+  margin-bottom: 20px;
+  padding: 12px 0 2px;
+  border-top: 1px solid rgba(255, 255, 255, .07);
+}
+.psv-row:first-child {
+  border-top: 0;
+}
+.psv-title {
+  font-size: 27px;
+  line-height: 34px;
+  letter-spacing: 1.8px;
+  font-weight: bold;
+  color: #8b95a3;
+}
+.psv-row.is-row-focused .psv-title {
+  font-size: 34px;
+  line-height: 42px;
+  color: #ffffff;
+}
+.psv-btn {
+  border-radius: 12px;
+  background: #1b1b1b;
+  color: #d7dde4;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08);
+}
+.psv-btn.is-focused {
+  background: #d21525;
+  color: #ffffff;
+  box-shadow: 0 0 0 3px #ffffff;
+  -webkit-transform: scale(1.03);
+  transform: scale(1.03);
+}
+.psv-btn.is-selected {
+  color: #ffffff;
+}
+.psv-ep-btn {
+  border-radius: 10px;
+}
+.psv-ep-btn.is-focused,
+.psv-ep-btn.is-selected.is-focused,
+.psv-ep-btn.is-current.is-focused {
+  background: #d21525;
+  color: #ffffff;
+  outline: 3px solid #ffffff;
+  box-shadow: 0 6px 20px rgba(210, 21, 37, .55);
+}
+.psv-range-btn.is-selected {
+  color: #ff6b76;
+}
+
+.home-sidebar-bg {
+  width: 680px;
+  background: -webkit-linear-gradient(left, #000000 0%, rgba(0,0,0,.90) 45%, rgba(0,0,0,0) 100%);
+  background: linear-gradient(to right, #000000 0%, rgba(0,0,0,.90) 45%, rgba(0,0,0,0) 100%);
+}
+.home-tabs {
+  padding-top: 178px;
+  padding-left: 26px;
+}
+.tab-item {
+  height: 78px;
+  width: 302px;
+  margin-bottom: 8px;
+  border-radius: 14px;
+  background: #121212;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .045);
+}
+.tab-item .tab-pill {
+  left: 0; top: 0;
+  width: 302px; height: 78px;
+  border-radius: 14px;
+  background: -webkit-linear-gradient(left, #b3101d 0%, #d21525 100%);
+  background: linear-gradient(to right, #b3101d 0%, #d21525 100%);
+  box-shadow: none;
+}
+.tab-item .tab-icon {
+  left: 24px; top: 22px;
+  width: 34px; height: 34px;
+  color: #8b95a3;
+}
+.tab-item .tab-icon svg { width: 34px; height: 34px; }
+.tab-item.is-selected { background: #1d1d1d; }
+.tab-item.is-selected .tab-icon { color: #ffffff; }
+.tab-item.is-selected::before { display: none; }
+.tab-item.is-focused::before { display: none; }
+.tab-item .tab-title {
+  left: 76px; top: 0;
+  height: 78px;
+  line-height: 78px;
+  font-size: 26px;
+  letter-spacing: .2px;
+  color: #b9c0c8;
+}
+.tab-item.is-selected .tab-title { color: #ffffff; }
+.tab-item.is-focused .tab-title { color: #ffffff; }
+
+/* Collapsed rail keeps the same boxed cards, only narrower. */
+.home-tabs.is-collapsed .tab-item {
+  width: 96px;
+}
+.home-tabs.is-collapsed .tab-item .tab-pill {
+  width: 96px;
+}
+.home-tabs.is-collapsed .tab-item .tab-icon {
+  left: 31px;
+}
+
+/* Poster cards: rounded, white focus ring with the brand red halo. */
+.poster,
+.poster .p-img {
+  border-radius: 12px;
+}
+.poster .p-img {
+  overflow: hidden;
+}
+.poster.is-focused {
+  -webkit-transform: scale(1.055);
+  transform: scale(1.055);
+}
+.poster.is-focused::after {
+  box-shadow: inset 0 0 0 3px #ffffff;
+  border-radius: 12px;
+}
+.poster.is-focused {
+  outline: 3px solid rgba(210, 21, 37, .85);
+  outline-offset: 2px;
+}
+.poster .p-title {
+  font-size: 22px;
+  line-height: 30px;
+  padding: 0 12px 10px;
+  background: -webkit-linear-gradient(top, rgba(0,0,0,0), rgba(0,0,0,.86));
+  background: linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,.86));
+  border-radius: 0 0 12px 12px;
+}
+
+/* Catalogue section titles become scannable. */
+.kids-subtitle {
+  font-size: 30px;
+  line-height: 40px;
+  font-weight: bold;
+  color: #ffffff;
+  letter-spacing: .2px;
+  padding-left: 18px;
+}
+.kids-subtitle::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 6px;
+  width: 5px; height: 28px;
+  border-radius: 3px;
+  background: #d21525;
+}
+.catalog-empty {
+  font-size: 25px;
+  line-height: 34px;
+  color: #8b95a3;
+}
+.home-page {
+  padding-bottom: 90px;
+}
+
+/* In-tab catalogue pagination */
+.catalog-pager {
+  display: -webkit-box;
+  display: flex;
+  -webkit-box-align: center;
+  align-items: center;
+}
+.catalog-pager-btn {
+  display: -webkit-box;
+  display: flex;
+  -webkit-box-align: center;
+  align-items: center;
+  -webkit-box-pack: center;
+  justify-content: center;
+  height: 58px;
+  padding: 0 30px;
+  margin-right: 22px;
+  border-radius: 11px;
+  background: #181818;
+  color: #d7dde4;
+  font-size: 25px;
+}
+.catalog-pager-btn.is-focused {
+  background: #d21525;
+  color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, .9);
+}
+.catalog-pager-info {
+  margin-right: 22px;
+  font-size: 22px;
+  color: #8b95a3;
+}
+
+/* --- Share panel: free + anti-resale + Telegram QR ----------------------- */
+.share-panel {
+  padding: 66px 84px 60px 64px;
+  box-sizing: border-box;
+}
+.share-head {
+  font-size: 44px;
+  line-height: 52px;
+  font-weight: bold;
+  color: #ffffff;
+}
+.share-sub {
+  margin-top: 10px;
+  max-width: 1020px;
+  font-size: 22px;
+  line-height: 32px;
+  color: #8b95a3;
+}
+.share-free {
+  display: -webkit-box;
+  display: flex;
+  -webkit-box-align: center;
+  align-items: center;
+  margin-top: 22px;
+  padding: 18px 24px;
+  border-radius: 14px;
+  background: #0d2016;
+  border: 1px solid rgba(70, 200, 120, .35);
+}
+.share-free-badge {
+  padding: 9px 16px;
+  border-radius: 8px;
+  background: #1f7a45;
+  color: #ffffff;
+  font-size: 20px;
+  font-weight: bold;
+  letter-spacing: 1.2px;
+  white-space: nowrap;
+}
+.share-free-text {
+  margin-left: 20px;
+  font-size: 21px;
+  line-height: 29px;
+  color: #d3ecdc;
+}
+.share-warning {
+  margin-top: 16px;
+  padding: 18px 24px;
+  border-radius: 14px;
+  background: #240e11;
+  border: 1px solid rgba(210, 21, 37, .55);
+}
+.share-warning-title {
+  font-size: 24px;
+  font-weight: bold;
+  color: #ff9aa4;
+}
+.share-warning-text {
+  margin-top: 6px;
+  font-size: 21px;
+  line-height: 29px;
+  color: #f0d7da;
+}
+.share-warning-contact {
+  margin-top: 8px;
+  font-size: 21px;
+  font-weight: bold;
+  color: #ffd166;
+}
+.share-qr-box {
+  display: -webkit-box;
+  display: flex;
+  -webkit-box-align: center;
+  align-items: center;
+  margin-top: 18px;
+  padding: 20px 24px;
+  border-radius: 14px;
+  background: #121212;
+  border: 1px solid rgba(255, 255, 255, .09);
+}
+.share-qr {
+  width: 196px;
+  height: 196px;
+  padding: 10px;
+  box-sizing: border-box;
+  background: #ffffff;
+  border-radius: 12px;
+}
+.share-qr-text {
+  margin-left: 28px;
+}
+.share-qr-title {
+  font-size: 28px;
+  font-weight: bold;
+  color: #ffffff;
+}
+.share-qr-line {
+  margin-top: 8px;
+  max-width: 820px;
+  font-size: 21px;
+  line-height: 29px;
+  color: #a7b1bd;
+}
+.share-qr-handle {
+  margin-top: 10px;
+  font-size: 27px;
+  font-weight: bold;
+  color: #8fe9ff;
+}
+.share-qr-url {
+  margin-top: 4px;
+  font-size: 19px;
+  color: #6f7884;
+}
+.sp-about-free {
+  position: absolute;
+  left: 52px; right: 52px; top: 486px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  background: #240e11;
+  border: 1px solid rgba(210, 21, 37, .5);
+  font-size: 23px;
+  line-height: 32px;
+  color: #ffd7db;
+}
+.welcome-free {
+  position: absolute;
+  left: 0; right: 0; bottom: 54px;
+  text-align: center;
+  font-size: 20px;
+  line-height: 28px;
+  letter-spacing: .4px;
+  color: #7d8794;
+}
+
+/* --- Rail header / footer hints ------------------------------------------ */
+.home-tabs {
+  border-right: 1px solid rgba(255, 255, 255, .05);
+}
+.home-tabs::before {
+  content: "MENÚ";
+  position: absolute;
+  left: 30px; top: 118px;
+  font-size: 16px;
+  letter-spacing: 3.4px;
+  font-weight: bold;
+  color: #6b7480;
+}
+.home-tabs::after {
+  content: "OK Abrir   ·   ◀ ▶ Navegar";
+  position: absolute;
+  left: 30px; bottom: 36px;
+  font-size: 16px;
+  letter-spacing: .4px;
+  color: #5f6874;
+}

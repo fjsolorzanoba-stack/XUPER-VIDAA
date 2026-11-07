@@ -1,0 +1,959 @@
+/* =============================================================================
+   XuperTV — Clean layer (loaded last)
+   Only the in-player submenu and the "Ajuste de reproducir" sheet.
+   The rest of the interface keeps the previous design.
+   ============================================================================= */
+
+/* --- Player bottom sheet: two rows, no icon clutter ---------------------- */
+.player-playsetting-view {
+  padding: 0 84px 58px;
+  background: -webkit-linear-gradient(top, rgba(0,0,0,0) 0%, rgba(0,0,0,.82) 42%, rgba(0,0,0,.97) 100%);
+  background: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,.82) 42%, rgba(0,0,0,.97) 100%);
+}
+.psv-scroll {
+  padding: 0;
+}
+.psv-row {
+  margin-bottom: 26px;
+  padding: 0;
+  border-top: 0;
+}
+.psv-title {
+  margin-bottom: 14px;
+  font-size: 26px;
+  line-height: 32px;
+  letter-spacing: 2.4px;
+  font-weight: 700;
+  color: #8b95a3;
+}
+.psv-row.is-row-focused .psv-title {
+  color: #ffffff;
+  font-size: 26px;
+}
+.psv-grid {
+  margin-top: 0;
+}
+.psv-btn {
+  height: 66px;
+  padding: 0 34px;
+  border-radius: 10px;
+  background: #1c1c1c;
+  border: 1px solid #333333;
+  color: #e6e6e6;
+  font-size: 27px;
+  box-shadow: none;
+}
+.psv-btn.is-selected {
+  border-color: #e50914;
+  color: #ffffff;
+}
+.psv-btn.is-focused {
+  background: #ffffff;
+  border-color: #ffffff;
+  color: #000000;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, .85);
+  -webkit-transform: none;
+  transform: none;
+}
+.psv-btn .psv-check {
+  display: none;
+}
+.psv-mode-help {
+  margin-top: 12px;
+  color: #aeb6c2;
+  font-size: 20px;
+  line-height: 27px;
+}
+#psv-btn-config {
+  margin-left: 6px;
+}
+
+/* Chapter picker inside the same sheet: numbers, seasons and ranges. */
+#psv-sec-selection {
+  margin-bottom: 20px;
+}
+.psv-selection-empty {
+  font-size: 20px;
+  line-height: 28px;
+  color: #6f7780;
+}
+.psv-seasons-row,
+.psv-episode-numbers,
+.psv-episode-ranges {
+  margin-top: 8px;
+}
+.psv-season-btn,
+.psv-all-episodes-btn {
+  height: 50px;
+  margin-right: 12px;
+  padding: 0 24px;
+  border-radius: 8px;
+  background: #1c1c1c;
+  border: 1px solid #333333;
+  color: #d7dde4;
+  font-size: 21px;
+}
+.psv-season-btn.is-selected {
+  border-color: #e50914;
+  color: #ffffff;
+}
+.psv-season-btn.is-focused,
+.psv-all-episodes-btn.is-focused {
+  background: #ffffff;
+  border-color: #ffffff;
+  color: #000000;
+  box-shadow: none;
+}
+.psv-ep-btn {
+  width: 150px;
+  min-width: 150px;
+  height: 64px;
+  margin-right: 10px;
+  border-radius: 8px;
+  background: #1c1c1c;
+  border: 1px solid #333333;
+  color: #e6e6e6;
+  box-shadow: none;
+}
+.psv-ep-btn.is-selected,
+.psv-ep-btn.is-current {
+  border-color: #e50914;
+  color: #ffffff;
+}
+.psv-ep-btn.is-focused {
+  background: #ffffff;
+  border-color: #ffffff;
+  color: #000000;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, .8);
+  -webkit-transform: none;
+  transform: none;
+}
+.psv-ep-prefix,
+.psv-ep-title {
+  color: #8b95a3;
+  font-size: 15px;
+}
+.psv-ep-num {
+  color: #ffffff;
+  font-size: 26px;
+}
+.psv-ep-btn.is-focused .psv-ep-prefix,
+.psv-ep-btn.is-focused .psv-ep-num,
+.psv-ep-btn.is-focused .psv-ep-title {
+  color: #000000;
+}
+.psv-ep-status-tag {
+  border-radius: 4px;
+  background: #e50914;
+  color: #ffffff;
+}
+
+/* Compact episode picker shown over the detail mini-player.  Keep the row
+   light enough for webOS 3/4 while making the selected chapter unmistakable. */
+.detail-episode {
+  background: rgba(53, 59, 70, .92);
+  border: 1px solid rgba(255, 255, 255, .13);
+  box-sizing: border-box;
+}
+.detail-episode .ep-num {
+  font-size: 32px;
+  font-weight: 600;
+}
+.detail-episode.is-playing {
+  background: #d21525;
+  border-color: #ffffff;
+}
+.detail-episode.is-focused {
+  background: #ffffff;
+  border-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(255,255,255,.82);
+}
+.detail-episode.is-focused .ep-num {
+  color: #000000;
+}
+.psv-range-btn {
+  height: 36px;
+  margin-right: 12px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: #8b95a3;
+  font-size: 20px;
+}
+.psv-range-btn.is-selected {
+  border-color: #e50914;
+  color: #ffffff;
+}
+.psv-range-btn.is-focused {
+  background: #ffffff;
+  color: #000000;
+}
+
+.psv-header {
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #1e1e1e;
+}
+.psv-header-badge,
+.psv-header-tips {
+  display: none;
+}
+.psv-header-title {
+  font-size: 34px;
+  line-height: 40px;
+  font-weight: 600;
+  color: #ffffff;
+  text-shadow: none;
+}
+.psv-header-sub {
+  font-size: 19px;
+  line-height: 25px;
+  color: #8b95a3;
+}
+
+/* --- "Ajuste de reproducir" dialog --------------------------------------- */
+.dialog-playsettings-overlay {
+  background: rgba(0, 0, 0, .74);
+}
+.dialog-playsettings-box {
+  top: 110px;
+  height: 800px;
+  background: #141414;
+  border: 1px solid #2b2b2b;
+  border-radius: 14px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .55);
+}
+.dps-header {
+  height: 96px;
+  line-height: 96px;
+  text-align: left;
+  padding-left: 74px;
+  box-sizing: border-box;
+  font-size: 34px;
+  font-weight: 600;
+  background: #141414;
+  border-bottom: 1px solid #262626;
+}
+.dps-body {
+  padding: 44px 74px 0;
+}
+#dps-row-audio { height: 60px; margin-bottom: 36px; }
+#dps-row-switch { height: 52px; margin-bottom: 26px; }
+#dps-row-lang { height: 60px; margin-bottom: 30px; }
+#dps-row-size { height: 60px; margin-bottom: 30px; }
+#dps-row-style { height: 60px; margin-bottom: 0; }
+.dps-label {
+  width: 190px;
+  min-width: 190px;
+  font-size: 25px;
+  font-weight: 500;
+  color: #9aa3ad;
+}
+.dps-btn {
+  width: 218px;
+  min-width: 218px;
+  height: 60px;
+  margin-right: 18px;
+  padding: 0 34px;
+  border-radius: 8px;
+  background: #1d1d1d;
+  border: 1px solid #333333;
+  color: #e7e7e7;
+  font-size: 25px;
+}
+.dps-btn.is-selected {
+  background: #1d1d1d;
+  border-color: #e50914;
+  color: #ffffff;
+}
+.dps-btn.is-selected::after {
+  content: "";
+  width: 12px;
+  height: 12px;
+  margin-top: -6px;
+  right: 16px;
+  border-radius: 50%;
+  background: #e50914;
+  font-size: 0;
+}
+.dps-btn.is-focused {
+  background: #ffffff;
+  border-color: #ffffff;
+  color: #000000;
+}
+.dps-btn.is-focused::after {
+  background: #000000;
+}
+.dps-switch {
+  width: 92px;
+  height: 46px;
+  border-radius: 23px;
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  box-shadow: none;
+}
+.dps-switch .dps-switch-dot {
+  width: 36px;
+  height: 36px;
+  top: 4px;
+  left: 5px;
+  background: #8b95a3;
+}
+.dps-switch.is-on {
+  background: #e50914;
+  border-color: #e50914;
+}
+.dps-switch.is-on .dps-switch-dot {
+  background: #ffffff;
+}
+.dps-switch .dps-switch-text {
+  display: none;
+}
+.dps-switch.is-focused {
+  box-shadow: 0 0 0 3px #ffffff;
+}
+.dps-footer {
+  height: 96px;
+  margin: 0;
+  padding: 0 74px;
+  -webkit-box-pack: start;
+  justify-content: flex-start;
+  border-top: 1px solid #262626;
+}
+.dps-exit-btn {
+  width: 200px;
+  height: 54px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid #3a3a3a;
+  color: #d7dde4;
+  font-size: 24px;
+}
+.dps-exit-btn.is-focused {
+  background: #ffffff;
+  border-color: #ffffff;
+  color: #000000;
+}
+.dps-empty-note {
+  font-size: 20px;
+  line-height: 28px;
+  color: #8b95a3;
+  padding: 10px 0;
+}
+
+/* --- Proxy panel --------------------------------------------------------- */
+.proxy-panel {
+  padding: 66px 84px 60px 64px;
+  box-sizing: border-box;
+}
+.proxy-note {
+  margin-top: 18px;
+  font-size: 20px;
+  line-height: 28px;
+  color: #8b95a3;
+}
+.proxy-input {
+  display: block;
+  width: 980px;
+  height: 66px;
+  margin-top: 14px;
+  padding: 0 20px;
+  border-radius: 8px;
+  background: #141414;
+  border: 1px solid #333333;
+  color: #ffffff;
+  font-size: 24px;
+  box-sizing: border-box;
+  outline: none;
+}
+.proxy-input.is-focused {
+  border-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, .3);
+}
+.proxy-status {
+  margin-top: 14px;
+  max-width: 980px;
+  font-size: 20px;
+  line-height: 28px;
+  color: #8b95a3;
+  word-wrap: break-word;
+}
+.proxy-actions {
+  display: -webkit-box;
+  display: flex;
+  margin-top: 20px;
+}
+.proxy-btn {
+  display: -webkit-box;
+  display: flex;
+  -webkit-box-align: center;
+  align-items: center;
+  height: 58px;
+  padding: 0 28px;
+  margin-right: 16px;
+  border-radius: 8px;
+  background: #1c1c1c;
+  border: 1px solid #333333;
+  color: #e6e6e6;
+  font-size: 24px;
+}
+.proxy-btn.is-focused {
+  background: #ffffff;
+  border-color: #ffffff;
+  color: #000000;
+}
+.proxy-hint {
+  margin-top: 26px;
+  max-width: 980px;
+  font-size: 19px;
+  line-height: 27px;
+  color: #6f7780;
+}
+
+/* Large in-player notice for Modo Fluido: it must be readable from the sofa
+   so a viewer understands that this mode is a workaround for stuttering
+   movies, not the default picture. */
+.player-mode-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 150px;
+  width: 1180px;
+  margin-left: -590px;
+  padding: 26px 42px;
+  border-radius: 16px;
+  background: rgba(8, 14, 28, 0.88);
+  border: 2px solid rgba(228, 164, 52, 0.9);
+  color: #ffffff;
+  font-size: 36px;
+  line-height: 1.28;
+  font-weight: 600;
+  text-align: center;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.85);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+  display: none;
+  z-index: 8;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+.player-mode-hint.is-active {
+  display: block;
+}
+.player-mode-hint .pmh-title {
+  display: block;
+  color: #ffcc4d;
+  font-size: 42px;
+  line-height: 1.16;
+  margin-bottom: 8px;
+}
+.player-mode-hint .pmh-sub {
+  display: block;
+  font-size: 28px;
+  line-height: 1.3;
+  font-weight: 400;
+  color: #d9dde4;
+}
+
+/* Episode numbers in the detail preview: large, centred and legible over the
+   tile background in every state (normal / playing / focused). */
+.detail-episode .ep-num {
+  display: block;
+  width: 100%;
+  font-size: 34px;
+  line-height: 65px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+.detail-episode.is-playing .ep-num {
+  color: #ffffff;
+}
+.detail-episode.is-focused .ep-num {
+  color: #000000;
+  text-shadow: none;
+}
+
+/* A collapsed rail is only a navigation affordance. Do not leave a vertical
+   border or gradient over live TV after focus has moved to the content. */
+.home-tabs.is-collapsed {
+  border-right-color: transparent;
+}
+.home-tabs.is-collapsed::before,
+.home-tabs.is-collapsed::after {
+  display: none;
+}
+.home-sidebar-bg.is-collapsed {
+  display: none;
+}
+
+/* Live-library controls reuse the dark cards and red selected state used by
+   the main side rail, while keeping the compact player layout. */
+.player-channels .pc-header {
+  height: 76px;
+  padding: 0 18px 0 22px;
+  background: #101216;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.player-channels .pc-title {
+  font-size: 27px;
+  font-weight: 600;
+  color: #fff;
+}
+.pc-tools { display: flex; align-items: center; }
+.pc-search,
+.pc-favorites,
+.pc-search-clear {
+  height: 42px;
+  margin-left: 9px;
+  padding: 0 15px;
+  border: 1px solid rgba(255,255,255,.13);
+  border-radius: 8px;
+  background: #202328;
+  color: #d7dce3;
+  font-size: 17px;
+  outline: none;
+}
+.pc-search.is-focused,
+.pc-favorites.is-focused,
+.pc-search-clear.is-focused,
+.pc-favorites.is-selected {
+  background: #d21525;
+  border-color: #fff;
+  color: #fff;
+}
+.player-channels .pc-categories {
+  top: 82px;
+  height: 62px;
+  padding: 8px 16px;
+  background: #0c0e12;
+}
+.player-channels .pc-cat-pill {
+  height: 42px;
+  line-height: 40px;
+  margin-right: 8px;
+  padding: 0 15px;
+  border-radius: 7px;
+  background: #1b1e23;
+  border: 1px solid rgba(255,255,255,.08);
+  color: #bcc4cf;
+}
+.player-channels .pc-cat-pill.is-selected,
+.player-channels .pc-cat-pill.is-focused {
+  background: #d21525;
+  border-color: #fff;
+  color: #fff;
+  box-shadow: none;
+}
+.player-channels .pc-div { top: 144px; }
+.player-channels .pc-list { top: 146px; }
+.pc-search-box {
+  position: absolute;
+  z-index: 4;
+  left: 16px;
+  right: 16px;
+  top: 84px;
+  height: 58px;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  background: #15181d;
+  border: 1px solid #d21525;
+  border-radius: 8px;
+}
+.pc-search-label { flex: 1; color: #aeb7c3; font-size: 15px; }
+.pc-search-input {
+  width: 100%;
+  height: 32px;
+  margin-top: 2px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 4px;
+  background: #08090b;
+  color: #fff;
+  font-size: 17px;
+  outline: none;
+}
+.pc-search-input.is-focused { box-shadow: 0 0 0 2px #fff; }
+
+/* =============================================================================
+   Canalera y Controles de TV: Dark Fidelity Style (coherente con Sidebar y Account)
+   ============================================================================= */
+.player-channels .pc-header {
+  left: 0;
+  right: 0;
+  height: 128px;
+  padding: 16px 24px 10px;
+  background: rgba(14, 16, 22, .96);
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  box-sizing: border-box;
+  z-index: 8;
+}
+.player-channels .pc-title-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.player-channels .pc-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+}
+.player-channels .pc-cat-badge {
+  display: inline-block;
+  margin-left: 14px;
+  padding: 3px 12px;
+  font-size: 17px;
+  font-weight: 600;
+  border-radius: 6px;
+  background: rgba(225, 28, 42, .18);
+  color: #ff5260;
+  border: 1px solid rgba(225, 28, 42, .35);
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.player-channels .pc-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.player-channels .pc-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  height: 42px;
+  line-height: 42px;
+  padding: 0 16px;
+  border-radius: 10px;
+  background: #1e2128;
+  border: 1px solid rgba(255,255,255,.12);
+  color: #e5e7eb;
+  font-size: 18px;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+  -webkit-transition: all .12s ease;
+  transition: all .12s ease;
+}
+.player-channels .pc-toolbar-btn svg {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+.player-channels .pc-toolbar-btn.is-focused {
+  background: #d21525;
+  color: #ffffff;
+  border-color: transparent;
+  box-shadow: 0 0 0 2px #ffffff, 0 0 12px rgba(210, 21, 37, .6);
+  -webkit-transform: scale(1.03);
+  transform: scale(1.03);
+}
+.player-channels .pc-toolbar-btn.is-active {
+  background: rgba(225, 28, 42, .25);
+  border-color: #e11c2a;
+  color: #ff5260;
+}
+.player-channels .pc-categories { display: none; }
+.player-channels .pc-div { left: 0; top: 127px; right: 0; }
+.player-channels .pc-list { left: 0; top: 128px; bottom: 82px; }
+.player-channels .pc-row {
+  min-height: 98px;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid rgba(255,255,255,.05);
+}
+.player-channels .pc-row .num { font-weight: 600; font-size: 26px; }
+.player-channels .pc-row .channel-star {
+  margin-left: auto;
+  padding-right: 8px;
+  font-size: 26px;
+  color: #ffcc00;
+  text-shadow: 0 0 8px rgba(255,204,0,.5);
+}
+.player-channels .pc-menu { left: 0; }
+.pc-search-box {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 136px;
+  z-index: 15;
+  padding: 16px 20px;
+  background: #181b22;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.14);
+  box-shadow: 0 10px 35px rgba(0,0,0,.7);
+}
+.pc-search-label { display: block; font-size: 19px; color: #a0a6b2; margin-bottom: 8px; }
+.pc-search-input {
+  width: 100%;
+  height: 48px;
+  padding: 0 14px;
+  background: #0e1015;
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 20px;
+  outline: none;
+  box-sizing: border-box;
+}
+.pc-search-input.is-focused { border-color: #d21525; box-shadow: 0 0 0 2px #fff; }
+
+/* Botones de acción rápida en Inicio (Live Fast) */
+.live-fast {
+  position: absolute;
+  z-index: 20;
+  left: 192px;
+  bottom: 22px;
+  height: 52px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+}
+#screen-home.is-rail-open .live-fast { left: 354px; }
+.live-fast .fast-btn {
+  height: 48px;
+  line-height: 48px;
+  padding: 0 20px;
+  border-radius: 10px;
+  background: #1e2128;
+  color: #e5e7eb;
+  font-size: 19px;
+  font-weight: 600;
+  border: 1px solid rgba(255,255,255,.12);
+  outline: none;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  -webkit-transition: all .12s ease;
+  transition: all .12s ease;
+}
+.live-fast .fast-btn svg {
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+.live-fast .fast-btn.is-focused {
+  background: #d21525;
+  color: #ffffff;
+  border-color: transparent;
+  box-shadow: 0 0 0 2px #ffffff, 0 0 12px rgba(210, 21, 37, .6);
+  -webkit-transform: scale(1.03);
+  transform: scale(1.03);
+}
+.live-fast .fast-btn.is-active {
+  background: rgba(225, 28, 42, .25);
+  border-color: #e11c2a;
+  color: #ff5260;
+}
+
+/* En Inicio la mini-TV ocupa la parte superior. Las acciones quedan justo
+   debajo, no pegadas al borde inferior donde se pierden en paneles pequeños. */
+.live-fast {
+  top: 654px;
+  bottom: auto;
+}
+#screen-home.is-rail-open .live-fast { top: 566px; }
+.live-fast .fast-btn {
+  width: auto;
+  min-width: 132px;
+  box-sizing: border-box;
+  justify-content: center;
+}
+
+/* Favoritos de la canalera: una acción independiente en cada fila. Así OK
+   reproduce el canal y → llega a la estrella, sin depender de doble pulsación. */
+.player-channels .pc-row .nm,
+.player-channels .pc-row .epg { right: 76px; }
+.player-channels .pc-channel-fav {
+  position: absolute;
+  right: 18px;
+  top: 50%;
+  width: 48px;
+  height: 48px;
+  margin-top: -24px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #9aa0a8;
+  font-size: 32px;
+  line-height: 48px;
+  text-align: center;
+  outline: none;
+}
+.player-channels .pc-channel-fav.is-favorite { color: #ffcc00; text-shadow: 0 0 8px rgba(255,204,0,.5); }
+.player-channels .pc-channel-fav.is-focused {
+  background: #d21525;
+  color: #ffffff;
+  box-shadow: 0 0 0 2px #ffffff;
+}
+
+/* Inicio TV: la previsualización queda limpia. Buscar, favoritos y categorías
+   pertenecen al encabezado de la lista de canales de la derecha. */
+.live-fast,
+#screen-home.is-rail-open .live-fast {
+  left: auto;
+  right: 40px;
+  top: 16px;
+  bottom: auto;
+  width: 506px;
+  height: 54px;
+  padding: 5px;
+  gap: 6px;
+  background: rgba(14,16,22,.94);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+.live-fast .fast-btn {
+  width: 120px;
+  min-width: 0;
+  height: 42px;
+  padding: 0;
+  border-radius: 6px;
+  justify-content: center;
+}
+.live-fast .fast-btn span { display: none; }
+.live-fast .fast-btn svg { width: 24px; height: 24px; margin: 0; }
+.live-fast .fast-btn.f-srch,
+.live-fast .fast-btn.f-filter,
+.live-fast .fast-btn.f-fav,
+.live-fast .fast-btn.f-all { background-image: none !important; }
+.live-list {
+  top: 86px !important;
+  height: 634px !important;
+  z-index: 4;
+}
+
+/* Estrella de favorito en la lista de canales de Home */
+.live-row .channel-star {
+  position: absolute;
+  right: 18px;
+  top: 50%;
+  -webkit-transform: translateY(-50%);
+  transform: translateY(-50%);
+  font-size: 26px;
+  color: #ffcc00;
+  text-shadow: 0 0 8px rgba(255,204,0,.5);
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  line-height: 44px;
+  outline: none;
+}
+.live-row .channel-star.is-focused {
+  background: #d21525;
+  color: #ffffff;
+  box-shadow: 0 0 0 2px #ffffff;
+}
+
+/* El canal en reproducción conserva una referencia visual aunque el foco se
+   mueva a Buscar, Favoritos o Categorías. El foco remoto sigue siendo blanco. */
+.live-row.is-current:not(.is-focused) {
+  background: rgba(210, 21, 37, .34);
+  box-shadow: inset 5px 0 0 #d21525;
+}
+.player-channels .pc-row.is-current:not(.is-focused) {
+  background: rgba(210, 21, 37, .22);
+  box-shadow: inset 4px 0 0 #d21525;
+}
+
+/* Selector de Categorías de TV: Estilo Dark Fidelity idéntico a Account */
+.player-categories {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  z-index: 95;
+  background: #0c0e14;
+  background: -webkit-linear-gradient(top, #0f121a 0%, #08090d 100%);
+  background: linear-gradient(180deg, #0f121a 0%, #08090d 100%);
+  padding: 0;
+  box-sizing: border-box;
+}
+.pcat-head {
+  margin: 50px 100px 24px;
+  padding-left: 22px;
+  border-left: 5px solid #d21525;
+}
+.pcat-title {
+  font-size: 42px;
+  font-weight: 700;
+  line-height: 50px;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+}
+.pcat-sub {
+  margin-top: 6px;
+  font-size: 21px;
+  color: #9ca3af;
+}
+.pcat-grid {
+  position: absolute;
+  left: 100px;
+  right: 100px;
+  top: 175px;
+  bottom: 50px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.pcat-tile {
+  display: inline-block;
+  vertical-align: top;
+  width: 312px;
+  height: 72px;
+  line-height: 72px;
+  margin: 0 20px 20px 0;
+  padding: 0 24px;
+  border-radius: 12px;
+  background: #181b22;
+  border: 1px solid rgba(255, 255, 255, .08);
+  color: #ffffff;
+  font-size: 22px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
+  outline: none;
+  cursor: pointer;
+  -webkit-transition: all .12s ease;
+  transition: all .12s ease;
+}
+.pcat-tile.is-selected {
+  background: rgba(225, 28, 42, .22);
+  border-color: #d21525;
+  color: #ffffff;
+}
+.pcat-tile.is-focused {
+  background: #d21525;
+  color: #ffffff;
+  border-color: transparent;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, .95), 0 0 16px rgba(210, 21, 37, .6);
+  -webkit-transform: scale(1.03);
+  transform: scale(1.03);
+}
+
+/* Carrusel de Catálogo: navegación fluida estilo Netflix */
+.catalog-rail::-webkit-scrollbar { display: none; }
+.catalog-rail {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+
+

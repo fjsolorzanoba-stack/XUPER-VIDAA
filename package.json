@@ -1,0 +1,13 @@
+{
+  "name": "xupertv-hydra-vidaa-server",
+  "version": "2.2.77",
+  "description": "Servidor unificado de XuperTV Hydra para Hisense VIDAA OS y Smart TVs",
+  "main": "tools/vidaa_server.mjs",
+  "scripts": {
+    "start": "node tools/vidaa_server.mjs"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "license": "MIT"
+}
